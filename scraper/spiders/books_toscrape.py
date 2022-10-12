@@ -1,16 +1,29 @@
 from scraper.items import BookLoader, BookItem
 from scrapy import Spider
 
+import random
+
 
 class BooksToScrapeSpider(Spider):
     name = "books-toscrape"
     allowed_domains = ["books.toscrape.com"]
-    start_urls = [
-        "http://books.toscrape.com/catalogue/category/books/biography_36/index.html",  # Biography
-        "http://books.toscrape.com/catalogue/category/books/default_15/index.html",  # Default
-    ]
+    start_urls = ["http://books.toscrape.com/index.html"]
 
     def parse(self, response):
+
+        categories = [
+            "http://books.toscrape.com/catalogue/category/books/biography_36/index.html"
+        ]
+
+        urls = response.css(".nav-list ul a::attr(href)")
+        urls = [f"http://books.toscrape.com/{url.get()}" for url in urls]
+
+        urls.remove(categories[0])
+        categories.append(random.choice(urls))
+
+        yield from response.follow_all(categories, self.parse_category)
+
+    def parse_category(self, response):
         book_page_links = response.css(".product_pod a")
         yield from response.follow_all(book_page_links, self.parse_book)
 
